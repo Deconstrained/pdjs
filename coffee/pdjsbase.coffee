@@ -1,5 +1,5 @@
 class window.PDJSobj
-  @version = "PDJS-0.5.0"
+  @version = "PDJS-0.6.0"
   logg: (str) ->
     if(this.logging)
       console.log(str)  
@@ -7,16 +7,15 @@ class window.PDJSobj
     return this.req_count++
 
   constructor: (params = {}) ->
-    this.subdomain = params.subdomain
     this.async = params.async == false ? false : true;
     this.token = params.token
+    this.from = params.from || false
     this.refresh = params.refresh || 60
     this.refresh_in_ms = this.refresh * 1000
     this.protocol = params.protocol || "https"
     this.server = params.server || "pagerduty.com"
     this.logging = params.logging || false
     this.req_count = 1
-    @api_version = "v1"
     this.logg("Initializing PDJSobj")
 
   # If you don't specify a callback, show something useful for debugging
@@ -32,7 +31,7 @@ class window.PDJSobj
     try
       error_detail = JSON.parse(error_detail)
     catch anyerror
-      this.logg("Not an JSON error")
+      this.log("Not a JSON error")
     console.log(error_detail)
     # PDJStools.logg(err)
     # TODO Handle these:
@@ -43,7 +42,7 @@ class window.PDJSobj
   api: (params = {}) ->
     this.logg("Call to API: "+ params.res)
     #PDJStools.logg(params)
-    params.url = params.url || @protocol+"://"+@subdomain+"."+this.server+"/api/"+@api_version+"/"+params.res
+    params.url = params.url || @protocol+"://api."+this.server+"/"+params.res
     params.attempt = params.attempt || 0
     params.async = params.async || this.async # For batch jobs, async helps us avoid getting throttled
     params.headers = params.headers || {}
@@ -59,6 +58,9 @@ class window.PDJSobj
     if(params.type=="POST" || params.type=="PUT") # the update APIs expect the data in the body to be JSON
       params.data = JSON.stringify(params.data)
     params.headers.Authorization = 'Token token='+this.token
+    params.headers.Accept = 'application/vnd.pagerduty+json;version=2'
+    if(this.from)
+      params.headers.From = this.from
     params.error = params.error || (err) =>
       this.error_function(err, params)
     params.success = params.success || (data) => 
